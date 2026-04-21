@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>眼動訓練 - 認識錢幣 (廣東話版)</title>
+    <style>
+        :root { --primary: #007AFF; --success: #28a745; --danger: #dc3545; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f2f5; font-family: "PingFang TC", sans-serif; }
+        
+        #ui-header {
+            position: fixed; top: 0; width: 100%; height: 80px;
+            background: white; display: flex; justify-content: space-around;
+            align-items: center; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        #game-area { position: relative; width: 100vw; height: 100vh; }
+
+        .gaze-loader {
+            position: absolute; bottom: -15px; left: 0; width: 0%; height: 10px;
+            background: var(--primary); transition: width linear; border-radius: 5px;
+        }
+
+        .money-card {
+            position: absolute; padding: 10px; background: white; border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); cursor: pointer;
+            transition: transform 0.2s; overflow: visible; border: 5px solid transparent;
+        }
+
+        #settings-panel {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 2000; padding: 40px 20px; box-sizing: border-box;
+            display: block; overflow-y: auto;
+        }
+        .setting-item { margin-bottom: 30px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 15px 25px; border: 2px solid #ddd; border-radius: 10px; background: white; font-size: 1.1rem; cursor: pointer; }
+        .btn.active { border-color: var(--primary); background: #eef6ff; color: var(--primary); font-weight: bold; }
+        #start-btn { width: 100%; background: var(--success); color: white; border: none; padding: 20px; font-size: 1.5rem; margin-top: 40px; border-radius: 15px; }
+    </style>
+</head>
+<body>
+
+<div id="settings-panel">
+    <h1>🧩 眼動訓練設定 (廣東話語音)</h1>
+    
+    <div class="setting-item">
+        <h3>1. 注視時間 (Dwell Time)</h3>
+        <div class="btn-group">
+            <button class="btn dwell-btn" data-time="500">0.5秒</button>
+            <button class="btn dwell-btn active" data-time="1000">1秒</button>
+            <button class="btn dwell-btn" data-time="1500">1.5秒</button>
+            <button class="btn dwell-btn" data-time="2000">2秒</button>
+        </div>
+    </div>
+
+    <div class="setting-item">
+        <h3>2. 出現面額</h3>
+        <div class="btn-group">
+            <button class="btn coin-btn active" data-val="10">$10</button>
+            <button class="btn coin-btn active" data-val="20">$20</button>
+            <button class="btn coin-btn active" data-val="50">$50</button>
+            <button class="btn coin-btn active" data-val="100">$100</button>
+        </div>
+    </div>
+
+    <div class="setting-item">
+        <h3>3. 題目難度</h3>
+        <div class="btn-group">
+            <button class="btn mode-btn active" data-mode="normal">有干擾項</button>
+            <button class="btn mode-btn" data-mode="simple">無干擾項 (單一目標)</button>
+        </div>
+    </div>
+
+    <button id="start-btn">確認並開始</button>
+</div>
+
+<div id="ui-header">
+    <h2 id="instruction">準備中...</h2>
+    <button onclick="location.reload()" style="padding:10px; border-radius:8px;">重新設定</button>
+</div>
+
+<div id="game-area"></div>
+
+<script>
+    let config = { dwell: 1000, coins: ['10','20','50','100'], mode: 'normal' };
+    const moneyData = {
+        '10': { name: '十蚊', img: '10.jpg' },
+        '20': { name: '二十蚊', img: '20.jpg' },
+        '50': { name: '五十蚊', img: '50.jpg' },
+        '100': { name: '一百蚊', img: '100.jpg' }
+    };
+
+    let dwellTimer;
+    let isSpeaking = false;
+
+    // 廣東話語音功能
+    function speak(text) {
+        window.speechSynthesis.cancel(); // 停止之前的聲音
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'zh-HK'; // 設定為廣東話
+        msg.rate = 0.9;     // 語速稍微慢一點，讓學生聽清楚
+        window.speechSynthesis.speak(msg);
+    }
+
+    // UI 控制代碼... (與之前相同)
+    document.querySelectorAll('.dwell-btn').forEach(b => b.onclick = () => {
+        document.querySelectorAll('.dwell-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active'); config.dwell = parseInt(b.dataset.time);
+    });
+    document.querySelectorAll('.coin-btn').forEach(b => b.onclick = () => {
+        b.classList.toggle('active');
+        config.coins = Array.from(document.querySelectorAll('.coin-btn.active')).map(x => x.dataset.val);
+    });
+    document.querySelectorAll('.mode-btn').forEach(b => b.onclick = () => {
+        document.querySelectorAll('.mode-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active'); config.mode = b.dataset.mode;
+    });
+
+    document.getElementById('start-btn').onclick = () => {
+        if(config.coins.length === 0) return alert("請至少選擇一個面額");
+        document.getElementById('settings-panel').style.display = 'none';
+        nextLevel();
+    };
+
+    function nextLevel() {
+        const area = document.getElementById('game-area');
+        area.innerHTML = '';
+        
+        const targetId = config.coins[Math.floor(Math.random() * config.coins.length)];
+        const targetName = moneyData[targetId].name;
+        document.getElementById('instruction').innerText = "請找出：" + targetName;
+        
+        // 語音提示題目
+        speak("請找出" + targetName);
+
+        let displayList = [targetId];
+        if (config.mode === 'normal') {
+            let others = config.coins.filter(id => id !== targetId);
+            others.sort(() => 0.5 - Math.random());
+            displayList.push(...others.slice(0, 2));
+        }
+        displayList.sort(() => 0.5 - Math.random());
+
+        displayList.forEach(id => {
+            const card = document.createElement('div');
+            card.className = 'money-card';
+            card.innerHTML = `<img src="${moneyData[id].img}" width="280" style="display:block;"><div class="gaze-loader"></div>`;
+            
+            card.style.left = Math.random() * (window.innerWidth - 320) + 'px';
+            card.style.top = 100 + Math.random() * (window.innerHeight - 350) + 'px';
+
+            card.onmouseenter = () => {
+                const loader = card.querySelector('.gaze-loader');
+                loader.style.width = '100%';
+                loader.style.transitionDuration = config.dwell + 'ms';
+                
+                dwellTimer = setTimeout(() => {
+                    if (id === targetId) {
+                        handleSuccess(card);
+                    } else {
+                        handleError(card);
+                    }
+                }, config.dwell);
+            };
+
+            card.onmouseleave = () => {
+                clearTimeout(dwellTimer);
+                const loader = card.querySelector('.gaze-loader');
+                loader.style.width = '0%';
+                loader.style.transitionDuration = '0s';
+                if(!card.dataset.locked) card.style.borderColor = "transparent";
+            };
+
+            area.appendChild(card);
+        });
+    }
+
+    function handleSuccess(el) {
+        el.dataset.locked = "true";
+        el.style.borderColor = "var(--success)";
+        el.style.transform = "scale(1.1)";
+        el.style.zIndex = "100";
+        speak("啱啦！");
+        setTimeout(nextLevel, 3000);
+    }
+
+    function handleError(el) {
+        el.style.borderColor = "var(--danger)";
+        speak("錯咗，再試下啦");
+        // 錯誤不跳關，讓學生繼續嘗試
+    }
+</script>
+</body>
+</html>
