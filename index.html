@@ -160,4 +160,26 @@
                         speak("答啱喇");
                         setTimeout(nextLevel, 1500);
                     } else {
-                        card
+                        card.style.borderColor = "var(--danger)";
+                        speak("唔係呢個");
+                    }
+                }, config.dwell);
+            };
+
+            const handleEnd = () => {
+                clearTimeout(dwellTimer);
+                card.style.borderColor = "transparent";
+                const loader = card.querySelector('.gaze-loader');
+                loader.style.transition = 'none';
+                loader.style.width = '0%';
+            };
+
+            card.addEventListener('pointerdown', handleStart);
+            card.addEventListener('pointerup', handleEnd);
+            card.addEventListener('pointerleave', handleEnd);
+            area.appendChild(card);
+        });
+    }
+</script>
+</body>
+</html>
