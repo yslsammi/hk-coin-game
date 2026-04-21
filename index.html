@@ -6,13 +6,9 @@
     <title>香港錢幣配對訓練</title>
     <style>
         :root { --primary: #007AFF; --success: #28a745; --danger: #dc3545; --warning: #ffc107; --gaze: #ffeb3b; }
-        
-        /* 防止 iPad 長按彈出選單與字體縮放 */
-        * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: manipulation; }
-        
+        * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: none; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f2f5; font-family: -apple-system, sans-serif; }
         
-        /* 頂部欄優化 */
         #ui-header {
             position: fixed; top: 0; width: 100%; height: 100px;
             background: white; display: none; justify-content: space-between;
@@ -21,45 +17,36 @@
         }
 
         #back-btn { 
-            padding: 12px 25px; font-size: 1.4rem; border-radius: 12px; 
-            border: none; background: #eeeeee; color: #333; cursor: pointer; font-weight: bold;
+            padding: 15px 30px; font-size: 1.5rem; border-radius: 15px; 
+            border: none; background: #f0f0f0; color: #333; cursor: pointer; font-weight: bold;
         }
 
-        /* 遊戲區域：增加間距確保 iPad 好點擊 */
         #game-area { 
-            display: flex; justify-content: space-evenly; align-items: center; 
+            display: flex; justify-content: center; align-items: center; gap: 50px;
             width: 100vw; height: 100vh; padding-top: 100px; box-sizing: border-box;
         }
 
         .match-card {
             position: relative; padding: 25px; background: white; border-radius: 35px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.12); border: 12px solid transparent; 
-            transition: transform 0.1s;
+            touch-action: none;
         }
         
-        /* iPad 按下去的反饋感 */
-        .match-card:active { transform: scale(0.95); }
-
-        .match-card img { display: block; border-radius: 20px; width: 400px; height: auto; pointer-events: none; }
-
-        /* 進度條樣式 */
+        .match-card img { display: block; border-radius: 20px; width: 420px; height: auto; pointer-events: none; }
         .gaze-loader { position: absolute; bottom: -18px; left: 0; width: 0%; height: 15px; background: var(--primary); border-radius: 8px; }
 
-        /* 設定面板優化 */
         #settings-panel { position: fixed; inset: 0; background: white; z-index: 2000; padding: 50px; overflow-y: auto; }
         .setting-item { margin-bottom: 35px; border-bottom: 1px solid #f0f0f0; padding-bottom: 20px; }
         .btn-group { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
-        .btn { padding: 20px 35px; border: 3px solid #eee; border-radius: 18px; background: white; font-size: 1.4rem; cursor: pointer; transition: 0.2s; }
+        .btn { padding: 20px 35px; border: 3px solid #eee; border-radius: 18px; background: white; font-size: 1.4rem; cursor: pointer; }
         .btn.active { border-color: var(--primary); background: #eef6ff; color: var(--primary); font-weight: bold; }
-        
         #start-btn { width: 100%; background: var(--success); color: white; padding: 30px; font-size: 2rem; border-radius: 25px; border: none; margin-top: 30px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="settings-panel">
-    <h1 style="text-align:center; font-size: 2.5rem; margin-bottom: 40px;">💰 錢幣配對訓練 (觸控優化版)</h1>
-    
+    <h1 style="text-align:center; font-size: 2.5rem;">💰 錢幣配對訓練 (iPad 優化版)</h1>
     <div class="setting-item">
         <h3>1. 訓練模式</h3>
         <div class="btn-group">
@@ -68,16 +55,14 @@
             <button class="btn lv-btn" data-lv="3">Lv 3: 錢幣 vs 錢幣</button>
         </div>
     </div>
-
     <div class="setting-item">
-        <h3>2. 按住/注視時間</h3>
+        <h3>2. 按住時間</h3>
         <div class="btn-group">
             <button class="btn dwell-btn" data-time="500">快速 (0.5s)</button>
             <button class="btn dwell-btn active" data-time="1000">標準 (1.0s)</button>
             <button class="btn dwell-btn" data-time="2000">慢速 (2.0s)</button>
         </div>
     </div>
-
     <div class="setting-item">
         <h3>3. 錢幣面額</h3>
         <div class="btn-group">
@@ -87,31 +72,27 @@
             <button class="btn coin-btn active" data-val="100">$100</button>
         </div>
     </div>
-
     <button id="start-btn" onclick="startGame()">✅ 開始訓練</button>
 </div>
 
 <div id="ui-header">
-    <button id="back-btn" onclick="location.reload()">🏠 返回設定</button>
+    <button id="back-btn" onclick="location.reload()">🏠 返回</button>
     <div style="font-size: 2.5rem; font-weight: bold;">請找出：<span id="target-name" style="color:var(--primary);">---</span></div>
-    <div style="width:120px;"></div>
+    <div style="width:100px;"></div>
 </div>
-
 <div id="game-area"></div>
 
 <script>
     let config = { lv: 1, dwell: 1000, coins: ['10','20','50','100'] };
-    
-    // 錢幣基礎檔名
     const moneyData = {
-        '10': { name: '十蚊', img: '10' },
-        '20': { name: '二十蚊', img: '20' },
-        '50': { name: '五十蚊', img: '50' },
-        '100': { name: '一百蚊', img: '100' }
+        '10': { name: '十蚊', img: '10.jpg' },
+        '20': { name: '二十蚊', img: '20.jpg' },
+        '50': { name: '五十蚊', img: '50.jpg' },
+        '100': { name: '一百蚊', img: '100.jpg' }
     };
 
-    // 嚴格對比 GitHub 上的大寫開頭檔名
-    const distractorData = [
+    // 這裡會自動嘗試大小寫
+    const distractors = [
         { name: '帽子', img: 'Cap.jpg' },
         { name: '長褲', img: 'Pant.jpg' },
         { name: '鞋子', img: 'Shoes.jpg' },
@@ -120,23 +101,63 @@
     ];
 
     let dwellTimer;
+    function speak(text) { window.speechSynthesis.cancel(); const msg = new SpeechSynthesisUtterance(text); msg.lang = 'zh-HK'; window.speechSynthesis.speak(msg); }
 
-    function speak(text) {
-        window.speechSynthesis.cancel();
-        const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'zh-HK';
-        window.speechSynthesis.speak(msg);
+    document.querySelectorAll('.lv-btn').forEach(b => b.onclick = () => { document.querySelectorAll('.lv-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); config.lv = parseInt(b.dataset.lv); });
+    document.querySelectorAll('.dwell-btn').forEach(b => b.onclick = () => { document.querySelectorAll('.dwell-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); config.dwell = parseInt(b.dataset.time); });
+    document.querySelectorAll('.coin-btn').forEach(b => b.onclick = () => { b.classList.toggle('active'); config.coins = Array.from(document.querySelectorAll('.coin-btn.active')).map(x => x.dataset.val); });
+
+    function startGame() {
+        document.getElementById('settings-panel').style.display = 'none';
+        document.getElementById('ui-header').style.display = 'flex';
+        nextLevel();
     }
 
-    // 選單邏輯
-    document.querySelectorAll('.lv-btn').forEach(b => b.onclick = () => {
-        document.querySelectorAll('.lv-btn').forEach(x => x.classList.remove('active'));
-        b.classList.add('active'); config.lv = parseInt(b.dataset.lv);
-    });
-    document.querySelectorAll('.dwell-btn').forEach(b => b.onclick = () => {
-        document.querySelectorAll('.dwell-btn').forEach(x => x.classList.remove('active'));
-        b.classList.add('active'); config.dwell = parseInt(b.dataset.time);
-    });
-    document.querySelectorAll('.coin-btn').forEach(b => b.onclick = () => {
-        b.classList.toggle('active');
-        config.coins = Array.from(document.querySelectorAll('.coin-btn.active')).map(x => x
+    function nextLevel() {
+        const area = document.getElementById('game-area');
+        area.innerHTML = '';
+        const targetId = config.coins[Math.floor(Math.random() * config.coins.length)];
+        const target = moneyData[targetId];
+        document.getElementById('target-name').innerText = target.name;
+        speak("請找出" + target.name);
+
+        let options = [];
+        if (config.lv === 1) {
+            options = [{ data: target, isCorrect: true }];
+        } else if (config.lv === 2) {
+            options = [{ data: target, isCorrect: true }, { data: distractors[Math.floor(Math.random() * distractors.length)], isCorrect: false }];
+        } else {
+            let others = config.coins.filter(id => id !== targetId);
+            let otherId = others.length > 0 ? others[Math.floor(Math.random() * others.length)] : targetId;
+            options = [{ data: target, isCorrect: true }, { data: moneyData[otherId], isCorrect: false }];
+        }
+
+        options.sort(() => Math.random() - 0.5).forEach(opt => {
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            
+            // 容錯機制：如果大寫開頭失敗，自動轉小寫
+            const img = document.createElement('img');
+            img.src = opt.data.img;
+            img.onerror = function() { 
+                if(!this.src.includes('lower')) {
+                    this.src = opt.data.img.toLowerCase() + '?lower'; 
+                }
+            };
+            
+            card.appendChild(img);
+            card.innerHTML += `<div class="gaze-loader"></div>`;
+            
+            const handleStart = (e) => {
+                e.preventDefault();
+                card.style.borderColor = "var(--gaze)";
+                const loader = card.querySelector('.gaze-loader');
+                loader.style.transition = `width ${config.dwell}ms linear`;
+                loader.style.width = '100%';
+                dwellTimer = setTimeout(() => {
+                    if (opt.isCorrect) {
+                        card.style.borderColor = "var(--success)";
+                        speak("答啱喇");
+                        setTimeout(nextLevel, 1500);
+                    } else {
+                        card
