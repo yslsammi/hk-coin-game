@@ -10,7 +10,7 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f2f5; font-family: -apple-system, sans-serif; }
         
         /* 設定面板 */
-        #settings-panel { position: fixed; inset: 0; background: white; z-index: 2000; padding: 30px; overflow-y: auto; }
+        #settings-panel { position: fixed; inset: 0; background: white; z-index: 2000; padding: 30px; overflow-y: auto; display: block; }
         .setting-item { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
         .btn { padding: 15px 25px; border: 3px solid #ddd; border-radius: 15px; background: white; font-size: 1.2rem; cursor: pointer; }
@@ -19,10 +19,35 @@
 
         /* 遊戲介面 */
         #ui-header { position: fixed; top: 0; width: 100%; height: 90px; background: white; display: none; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        #game-area { display: flex; justify-content: center; align-items: center; gap: 40px; width: 100vw; height: 100vh; padding-top: 90px; }
-        .match-card { position: relative; padding: 20px; background: white; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 12px solid transparent; transition: border-color 0.3s; }
-        .match-card img { display: block; border-radius: 15px; width: 400px; height: auto; pointer-events: none; }
-        .progress-bar { position: absolute; bottom: -15px; left: 0; width: 0%; height: 12px; background: var(--primary); border-radius: 6px; }
+        #game-area { display: flex; justify-content: center; align-items: center; gap: 60px; width: 100vw; height: 100vh; padding: 120px 50px 50px 50px; position: relative; }
+        
+        /* 卡片基礎樣式 */
+        .match-card { 
+            position: relative; padding: 20px; background: white; border-radius: 35px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 12px solid transparent; 
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, left 0.5s ease, top 0.5s ease;
+            z-index: 10;
+        }
+        
+        .match-card img { display: block; border-radius: 18px; width: 420px; height: auto; pointer-events: none; }
+        .progress-bar { position: absolute; bottom: -18px; left: 0; width: 0%; height: 15px; background: var(--primary); border-radius: 8px; z-index: 5; }
+
+        /* 💥 答對時的放大彈出樣式 */
+        .match-card.correct-popup {
+            transform: scale(1.5) !important; /* 放大 1.5 倍 */
+            border-color: var(--success) !important;
+            box-shadow: 0 0 60px rgba(40, 167, 69, 0.8) !important; /* 綠色霓虹光 */
+            z-index: 1000 !important; /* 確保在最上層 */
+            pointer-events: none; /* 彈出時不可點擊 */
+        }
+        
+        /* 答錯時的淡出樣式 */
+        .match-card.fade-out {
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+        }
+
     </style>
 </head>
 <body>
@@ -49,7 +74,7 @@
     </div>
 
     <div class="setting-item">
-        <h3>3. 訓練面額</h3>
+        <h3>3. 訓練面額 (可多選)</h3>
         <div class="btn-group">
             <button class="btn coin-btn active" data-val="10">$10</button>
             <button class="btn coin-btn active" data-val="20">$20</button>
@@ -62,9 +87,9 @@
 </div>
 
 <div id="ui-header">
-    <button onclick="location.reload()" style="padding:10px 20px; font-size:1.2rem; border-radius:10px; cursor:pointer;">🏠 返回</button>
+    <button onclick="location.reload()" style="padding:10px 20px; font-size:1.2rem; border-radius:10px; cursor:pointer;">🏠 返回設定</button>
     <div style="font-size: 2.2rem; font-weight: bold;">請找出：<span id="target-name" style="color:var(--primary);">---</span></div>
-    <div style="width:80px;"></div>
+    <div style="width:120px;"></div>
 </div>
 
 <div id="game-area"></div>
@@ -72,8 +97,9 @@
 <script>
     let config = { lv: 1, dwell: 1000, coins: ['10','20','50','100'] };
     let timer = null;
-    let isTransitioning = false; // 增加狀態鎖，防止重複點擊
+    let isTransitioning = false; // 狀態鎖
 
+    // 資源清單 (全為 png)
     const money = {
         '10': { name: '十蚊', file: '10.png' },
         '20': { name: '二十蚊', file: '20.png' },
@@ -86,16 +112,15 @@
         { name: '衣服', file: 'tee.png' }
     ];
 
+    // 設定頁面邏輯
     document.querySelectorAll('.lv-btn').forEach(b => b.onclick = () => {
         document.querySelectorAll('.lv-btn').forEach(x => x.classList.remove('active'));
         b.classList.add('active'); config.lv = parseInt(b.dataset.lv);
     });
-
     document.querySelectorAll('.dwell-btn').forEach(b => b.onclick = () => {
         document.querySelectorAll('.dwell-btn').forEach(x => x.classList.remove('active'));
         b.classList.add('active'); config.dwell = parseInt(b.dataset.ms);
     });
-
     document.querySelectorAll('.coin-btn').forEach(b => b.onclick = () => {
         b.classList.toggle('active');
         config.coins = Array.from(document.querySelectorAll('.coin-btn.active')).map(x => x.dataset.val);
@@ -105,11 +130,12 @@
         window.speechSynthesis.cancel();
         const msg = new SpeechSynthesisUtterance(text);
         msg.lang = 'zh-HK';
+        msg.rate = 0.9; // 稍微放慢語速
         window.speechSynthesis.speak(msg);
     }
 
     function startGame() {
-        if(config.coins.length === 0) return alert("請選擇面額");
+        if(config.coins.length === 0) return alert("請至少選擇一個面額");
         document.getElementById('settings-panel').style.display = 'none';
         document.getElementById('ui-header').style.display = 'flex';
         nextLevel();
@@ -119,6 +145,7 @@
         isTransitioning = false;
         const area = document.getElementById('game-area');
         area.innerHTML = '';
+        area.style.justifyContent = "center"; // 恢復預設佈局
         
         const targetId = config.coins[Math.floor(Math.random() * config.coins.length)];
         const target = money[targetId];
@@ -136,6 +163,8 @@
             options = [{ data: target, isCorrect: true }, { data: money[otherId], isCorrect: false }];
         }
 
+        const cards = [];
+
         options.sort(() => Math.random() - 0.5).forEach(opt => {
             const card = document.createElement('div');
             card.className = 'match-card';
@@ -143,9 +172,12 @@
             img.src = opt.data.file;
             card.appendChild(img);
             card.innerHTML += `<div class="progress-bar"></div>`;
+            
+            card.dataset.isCorrect = opt.isCorrect;
+            cards.push(card);
 
             const start = (e) => {
-                if (isTransitioning) return; // 下一題倒數時不准點擊
+                if (isTransitioning) return;
                 e.preventDefault();
                 card.style.borderColor = "var(--gaze)";
                 const bar = card.querySelector('.progress-bar');
@@ -155,17 +187,20 @@
                 timer = setTimeout(() => {
                     if (opt.isCorrect) {
                         isTransitioning = true;
-                        card.style.borderColor = "var(--success)";
                         speak("答啱喇");
-                        // 修正：等待 3000 毫秒（3秒）後才進入下一題
+                        
+                        // 🚀 執行彈出放大邏輯
+                        performPopup(card, cards);
+                        
+                        // 3秒後進入下一題
                         setTimeout(() => {
-                            area.innerHTML = ''; // 先清空畫面
-                            setTimeout(nextLevel, 500); // 視覺緩衝後出題
+                            area.innerHTML = ''; // 清空畫面緩衝
+                            setTimeout(nextLevel, 500);
                         }, 3000);
                     } else {
                         card.style.borderColor = "var(--danger)";
                         speak("唔係呢個");
-                        setTimeout(() => { card.style.borderColor = "transparent"; }, 1000);
+                        setTimeout(() => { if(!isTransitioning) card.style.borderColor = "transparent"; }, 800);
                     }
                 }, config.dwell);
             };
@@ -184,6 +219,39 @@
             card.addEventListener('pointerleave', stop);
             area.appendChild(card);
         });
+    }
+
+    // 💥 處理彈出放大與置中的函數
+    function performPopup(correctCard, allCards) {
+        const area = document.getElementById('game-area');
+        
+        // 1. 讓錯誤的卡片淡出
+        allCards.forEach(card => {
+            if (card !== correctCard) {
+                card.classList.add('fade-out');
+            }
+        });
+
+        // 2. 計算置中位置
+        // 獲取 game-area 的中心點
+        const areaRect = area.getBoundingClientRect();
+        const areaCenterX = areaRect.width / 2;
+        const areaCenterY = areaRect.height / 2;
+
+        // 獲取正確卡片當前的位置和大小
+        const cardRect = correctCard.getBoundingClientRect();
+        const cardCenterX = cardRect.left + cardRect.width / 2;
+        const cardCenterY = cardRect.top + cardRect.height / 2;
+
+        // 計算需要移動的距離 (考慮到 header 的高度偏移)
+        const moveX = areaCenterX - cardCenterX;
+        const moveY = areaCenterY - cardCenterY;
+
+        // 3. 套用彈出、放大、移到中央的樣式
+        correctCard.classList.add('correct-popup');
+        
+        // 使用 transform 結合放大和位移
+        correctCard.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.5)`;
     }
 </script>
 </body>
