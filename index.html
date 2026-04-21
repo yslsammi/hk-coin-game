@@ -9,6 +9,7 @@
         * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: none; box-sizing: border-box; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f2f5; font-family: -apple-system, sans-serif; }
         
+        /* 設定面板 */
         #settings-panel { position: fixed; inset: 0; background: white; z-index: 2000; padding: 30px; overflow-y: auto; }
         .setting-item { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
@@ -16,6 +17,7 @@
         .btn.active { border-color: var(--primary); background: #eef6ff; color: var(--primary); font-weight: bold; }
         #start-btn { width: 100%; background: var(--success); color: white; padding: 25px; font-size: 2rem; border-radius: 20px; border: none; margin-top: 20px; font-weight: bold; cursor: pointer; }
 
+        /* 遊戲介面 */
         #ui-header { position: fixed; top: 0; width: 100%; height: 90px; background: white; display: none; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         #game-area { display: flex; justify-content: center; align-items: center; gap: 40px; width: 100vw; height: 100vh; padding-top: 90px; }
         .match-card { position: relative; padding: 20px; background: white; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 12px solid transparent; }
@@ -27,6 +29,7 @@
 
 <div id="settings-panel">
     <h1 style="text-align:center;">💰 錢幣配對訓練</h1>
+    
     <div class="setting-item">
         <h3>1. 難度等級</h3>
         <div class="btn-group">
@@ -35,8 +38,18 @@
             <button class="btn lv-btn" data-lv="3">Lv 3: 錢幣 2選1</button>
         </div>
     </div>
+
     <div class="setting-item">
-        <h3>2. 訓練面額 (可多選)</h3>
+        <h3>2. 注視/按住時間</h3>
+        <div class="btn-group">
+            <button class="btn dwell-btn" data-ms="500">快速 (0.5s)</button>
+            <button class="btn dwell-btn active" data-ms="1000">標準 (1.0s)</button>
+            <button class="btn dwell-btn" data-ms="2000">慢速 (2.0s)</button>
+        </div>
+    </div>
+
+    <div class="setting-item">
+        <h3>3. 訓練面額 (可多選)</h3>
         <div class="btn-group">
             <button class="btn coin-btn active" data-val="10">$10</button>
             <button class="btn coin-btn active" data-val="20">$20</button>
@@ -44,6 +57,7 @@
             <button class="btn coin-btn active" data-val="100">$100</button>
         </div>
     </div>
+    
     <button id="start-btn" onclick="startGame()">✅ 開始訓練</button>
 </div>
 
@@ -52,13 +66,14 @@
     <div style="font-size: 2.2rem; font-weight: bold;">請找出：<span id="target-name" style="color:var(--primary);">---</span></div>
     <div style="width:80px;"></div>
 </div>
+
 <div id="game-area"></div>
 
 <script>
     let config = { lv: 1, dwell: 1000, coins: ['10','20','50','100'] };
     let timer = null;
 
-    // 根據 GitHub 檔案清單精確設定路徑
+    // 資源清單 (根據您的 GitHub 檔案列表：全為 png)
     const money = {
         '10': { name: '十蚊', file: '10.png' },
         '20': { name: '二十蚊', file: '20.png' },
@@ -73,10 +88,17 @@
         { name: '衣服', file: 'tee.png' }
     ];
 
+    // 按鈕互動邏輯
     document.querySelectorAll('.lv-btn').forEach(b => b.onclick = () => {
         document.querySelectorAll('.lv-btn').forEach(x => x.classList.remove('active'));
         b.classList.add('active'); config.lv = parseInt(b.dataset.lv);
     });
+
+    document.querySelectorAll('.dwell-btn').forEach(b => b.onclick = () => {
+        document.querySelectorAll('.dwell-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active'); config.dwell = parseInt(b.dataset.ms);
+    });
+
     document.querySelectorAll('.coin-btn').forEach(b => b.onclick = () => {
         b.classList.toggle('active');
         config.coins = Array.from(document.querySelectorAll('.coin-btn.active')).map(x => x.dataset.val);
@@ -127,8 +149,10 @@
                 e.preventDefault();
                 card.style.borderColor = "var(--gaze)";
                 const bar = card.querySelector('.progress-bar');
-                bar.style.transition = `width 1000ms linear`;
+                // 進度條時間現在由 config.dwell 動態決定
+                bar.style.transition = `width ${config.dwell}ms linear`;
                 bar.style.width = "100%";
+                
                 timer = setTimeout(() => {
                     if (opt.isCorrect) {
                         card.style.borderColor = "var(--success)";
@@ -138,7 +162,7 @@
                         card.style.borderColor = "var(--danger)";
                         speak("唔係呢個");
                     }
-                }, 1000);
+                }, config.dwell);
             };
 
             const stop = () => {
