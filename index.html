@@ -20,7 +20,7 @@
         /* 遊戲介面 */
         #ui-header { position: fixed; top: 0; width: 100%; height: 90px; background: white; display: none; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         #game-area { display: flex; justify-content: center; align-items: center; gap: 40px; width: 100vw; height: 100vh; padding-top: 90px; }
-        .match-card { position: relative; padding: 20px; background: white; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 12px solid transparent; }
+        .match-card { position: relative; padding: 20px; background: white; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 12px solid transparent; transition: border-color 0.3s; }
         .match-card img { display: block; border-radius: 15px; width: 400px; height: auto; pointer-events: none; }
         .progress-bar { position: absolute; bottom: -15px; left: 0; width: 0%; height: 12px; background: var(--primary); border-radius: 6px; }
     </style>
@@ -49,7 +49,7 @@
     </div>
 
     <div class="setting-item">
-        <h3>3. 訓練面額 (可多選)</h3>
+        <h3>3. 訓練面額</h3>
         <div class="btn-group">
             <button class="btn coin-btn active" data-val="10">$10</button>
             <button class="btn coin-btn active" data-val="20">$20</button>
@@ -72,8 +72,8 @@
 <script>
     let config = { lv: 1, dwell: 1000, coins: ['10','20','50','100'] };
     let timer = null;
+    let isTransitioning = false; // 增加狀態鎖，防止重複點擊
 
-    // 資源清單 (根據您的 GitHub 檔案列表：全為 png)
     const money = {
         '10': { name: '十蚊', file: '10.png' },
         '20': { name: '二十蚊', file: '20.png' },
@@ -81,14 +81,11 @@
         '100': { name: '一百蚊', file: '100.png' }
     };
     const clothes = [
-        { name: '帽子', file: 'cap.png' },
-        { name: '長褲', file: 'pant.png' },
-        { name: '鞋子', file: 'shoes.png' },
-        { name: '襪子', file: 'sock.png' },
+        { name: '帽子', file: 'cap.png' }, { name: '長褲', file: 'pant.png' },
+        { name: '鞋子', file: 'shoes.png' }, { name: '襪子', file: 'sock.png' },
         { name: '衣服', file: 'tee.png' }
     ];
 
-    // 按鈕互動邏輯
     document.querySelectorAll('.lv-btn').forEach(b => b.onclick = () => {
         document.querySelectorAll('.lv-btn').forEach(x => x.classList.remove('active'));
         b.classList.add('active'); config.lv = parseInt(b.dataset.lv);
@@ -112,15 +109,17 @@
     }
 
     function startGame() {
-        if(config.coins.length === 0) return alert("請至少選擇一個面額");
+        if(config.coins.length === 0) return alert("請選擇面額");
         document.getElementById('settings-panel').style.display = 'none';
         document.getElementById('ui-header').style.display = 'flex';
         nextLevel();
     }
 
     function nextLevel() {
+        isTransitioning = false;
         const area = document.getElementById('game-area');
         area.innerHTML = '';
+        
         const targetId = config.coins[Math.floor(Math.random() * config.coins.length)];
         const target = money[targetId];
         document.getElementById('target-name').innerText = target.name;
@@ -146,26 +145,33 @@
             card.innerHTML += `<div class="progress-bar"></div>`;
 
             const start = (e) => {
+                if (isTransitioning) return; // 下一題倒數時不准點擊
                 e.preventDefault();
                 card.style.borderColor = "var(--gaze)";
                 const bar = card.querySelector('.progress-bar');
-                // 進度條時間現在由 config.dwell 動態決定
                 bar.style.transition = `width ${config.dwell}ms linear`;
                 bar.style.width = "100%";
                 
                 timer = setTimeout(() => {
                     if (opt.isCorrect) {
+                        isTransitioning = true;
                         card.style.borderColor = "var(--success)";
                         speak("答啱喇");
-                        setTimeout(nextLevel, 1200);
+                        // 修正：等待 3000 毫秒（3秒）後才進入下一題
+                        setTimeout(() => {
+                            area.innerHTML = ''; // 先清空畫面
+                            setTimeout(nextLevel, 500); // 視覺緩衝後出題
+                        }, 3000);
                     } else {
                         card.style.borderColor = "var(--danger)";
                         speak("唔係呢個");
+                        setTimeout(() => { card.style.borderColor = "transparent"; }, 1000);
                     }
                 }, config.dwell);
             };
 
             const stop = () => {
+                if (isTransitioning) return;
                 clearTimeout(timer);
                 card.style.borderColor = "transparent";
                 const bar = card.querySelector('.progress-bar');
