@@ -5,63 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>香港錢幣配對訓練</title>
     <style>
-        :root { --primary: #007AFF; --success: #28a745; --danger: #dc3545; --gaze: #ffeb3b; }
+        :root { 
+            --primary: #007AFF; 
+            --success: #28a745; 
+            --danger: #dc3545; 
+            --gaze: #ffeb3b; 
+            --bg-color: #000000; 
+            --card-white: #ffffff;
+        }
         * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: none; box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f0f2f5; font-family: -apple-system, sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); font-family: -apple-system, sans-serif; }
         
         /* 設定面板 */
-        #settings-panel { position: fixed; inset: 0; background: white; z-index: 2000; padding: 30px; overflow-y: auto; }
-        .setting-item { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        #settings-panel { position: fixed; inset: 0; background: #1a1a1a; z-index: 2000; padding: 30px; overflow-y: auto; color: white; }
+        .setting-item { margin-bottom: 25px; border-bottom: 1px solid #444; padding-bottom: 15px; }
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-        .btn { padding: 15px 25px; border: 3px solid #ddd; border-radius: 15px; background: white; font-size: 1.2rem; cursor: pointer; }
-        .btn.active { border-color: var(--primary); background: #eef6ff; color: var(--primary); font-weight: bold; }
+        .btn { padding: 15px 25px; border: 3px solid #555; border-radius: 15px; background: #333; color: white; font-size: 1.2rem; cursor: pointer; }
+        .btn.active { border-color: var(--primary); background: var(--primary); font-weight: bold; }
         #start-btn { width: 100%; background: var(--success); color: white; padding: 25px; font-size: 2rem; border-radius: 20px; border: none; margin-top: 20px; font-weight: bold; cursor: pointer; }
 
         /* 遊戲介面 */
-        #ui-header { position: fixed; top: 0; width: 100%; height: 90px; background: white; display: none; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        #game-area { 
-            display: flex; justify-content: center; align-items: center; gap: 60px; 
-            width: 100vw; height: 100vh; padding-top: 90px; position: relative; 
-        }
+        #ui-header { position: fixed; top: 0; width: 100%; height: 90px; background: #1a1a1a; display: none; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 100; border-bottom: 2px solid #333; color: white; }
+        #game-area { display: flex; justify-content: center; align-items: center; gap: 80px; width: 100vw; height: 100vh; padding-top: 90px; position: relative; }
         
         .match-card { 
-            position: relative; padding: 20px; background: white; border-radius: 35px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 12px solid transparent;
-            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); /* 彈性過渡效果 */
-            z-index: 10;
+            position: relative; padding: 20px; background: var(--card-white); border-radius: 35px; 
+            box-shadow: 0 0 40px rgba(255,255,255,0.15); border: 12px solid transparent;
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: none; /* 隱藏滑鼠利於眼動訓練 */
         }
         
+        .match-card.empty-slot { background: var(--card-white); }
+        .match-card .placeholder { width: 420px; height: 300px; }
         .match-card img { display: block; border-radius: 18px; width: 420px; height: auto; pointer-events: none; }
-        .progress-bar { position: absolute; bottom: -18px; left: 0; width: 0%; height: 15px; background: var(--primary); border-radius: 8px; }
+        .progress-bar { position: absolute; bottom: -18px; left: 0; width: 0%; height: 20px; background: var(--gaze); border-radius: 10px; box-shadow: 0 0 20px var(--gaze); }
 
-        /* 💥 答對後的強制置中樣式 */
+        /* 特效樣式 */
         .match-card.correct-center {
-            position: absolute !important;
-            left: 50% !important;
-            top: 55% !important;
+            position: absolute !important; left: 50% !important; top: 55% !important;
             transform: translate(-50%, -50%) scale(1.6) !important;
             border-color: var(--success) !important;
-            box-shadow: 0 0 80px rgba(40, 167, 69, 0.9) !important;
+            box-shadow: 0 0 100px rgba(40, 167, 69, 0.9) !important;
             z-index: 1000 !important;
         }
-        
         .match-card.fade-out { opacity: 0; transform: scale(0.5); pointer-events: none; }
     </style>
 </head>
 <body>
 
 <div id="settings-panel">
-    <h1 style="text-align:center;">💰 錢幣配對訓練</h1>
+    <h1 style="text-align:center;">💰 視覺認知訓練：錢幣篇</h1>
     <div class="setting-item">
         <h3>1. 難度等級</h3>
         <div class="btn-group">
             <button class="btn lv-btn active" data-lv="1">Lv 1: 單一目標</button>
-            <button class="btn lv-btn" data-lv="2">Lv 2: 錢幣 vs 衣服</button>
-            <button class="btn lv-btn" data-lv="3">Lv 3: 錢幣 2選1</button>
+            <button class="btn lv-btn" data-lv="2">Lv 2: 辨識有無 (空白格)</button>
+            <button class="btn lv-btn" data-lv="3">Lv 3: 錢幣 vs 衣物</button>
+            <button class="btn lv-btn" data-lv="4">Lv 4: 錢幣 2選1</button>
         </div>
     </div>
     <div class="setting-item">
-        <h3>2. 注視/按住時間</h3>
+        <h3>2. 注視時間 (Dwell Time)</h3>
         <div class="btn-group">
             <button class="btn dwell-btn" data-ms="500">快速 (0.5s)</button>
             <button class="btn dwell-btn active" data-ms="1000">標準 (1.0s)</button>
@@ -81,8 +85,8 @@
 </div>
 
 <div id="ui-header">
-    <button onclick="location.reload()" style="padding:10px 20px; font-size:1.2rem; border-radius:10px;">🏠 返回</button>
-    <div style="font-size: 2.2rem; font-weight: bold;">請找出：<span id="target-name" style="color:var(--primary);">---</span></div>
+    <button onclick="location.reload()" style="padding:10px 20px; background:#333; color:white; border:none; border-radius:10px; cursor:pointer;">🏠 返回</button>
+    <div style="font-size: 2.2rem; font-weight: bold;">請找出：<span id="target-name" style="color:var(--gaze);">---</span></div>
     <div style="width:100px;"></div>
 </div>
 <div id="game-area"></div>
@@ -135,6 +139,8 @@
         const area = document.getElementById('game-area');
         area.innerHTML = '';
         
+        if (config.coins.length === 0) { alert("請先選擇訓練面額"); location.reload(); return; }
+
         const targetId = config.coins[Math.floor(Math.random() * config.coins.length)];
         const target = money[targetId];
         document.getElementById('target-name').innerText = target.name;
@@ -142,28 +148,30 @@
 
         let options = [];
         if (config.lv === 1) {
-            options = [{ data: target, isCorrect: true }];
+            options = [{ data: target, isCorrect: true, type: 'img' }];
         } else if (config.lv === 2) {
-            options = [{ data: target, isCorrect: true }, { data: clothes[Math.floor(Math.random() * clothes.length)], isCorrect: false }];
+            options = [{ data: target, isCorrect: true, type: 'img' }, { data: null, isCorrect: false, type: 'empty' }];
+        } else if (config.lv === 3) {
+            options = [{ data: target, isCorrect: true, type: 'img' }, { data: clothes[Math.floor(Math.random() * clothes.length)], isCorrect: false, type: 'img' }];
         } else {
             const others = Object.keys(money).filter(id => id !== targetId);
             const otherId = others[Math.floor(Math.random() * others.length)];
-            options = [{ data: target, isCorrect: true }, { data: money[otherId], isCorrect: false }];
+            options = [{ data: target, isCorrect: true, type: 'img' }, { data: money[otherId], isCorrect: false, type: 'img' }];
         }
 
-        const cards = [];
         options.sort(() => Math.random() - 0.5).forEach(opt => {
             const card = document.createElement('div');
-            card.className = 'match-card';
-            const img = document.createElement('img');
-            img.src = opt.data.file;
-            card.appendChild(img);
-            card.innerHTML += `<div class="progress-bar"></div>`;
-            cards.push(card);
+            card.className = opt.type === 'empty' ? 'match-card empty-slot' : 'match-card';
+            
+            if (opt.type === 'empty') {
+                card.innerHTML = `<div class="placeholder"></div><div class="progress-bar"></div>`;
+            } else {
+                card.innerHTML = `<img src="${opt.data.file}"><div class="progress-bar"></div>`;
+            }
 
-            const start = (e) => {
+            // 眼動儀觸發邏輯：PointerEnter
+            const startGaze = () => {
                 if (isTransitioning) return;
-                e.preventDefault();
                 card.style.borderColor = "var(--gaze)";
                 const bar = card.querySelector('.progress-bar');
                 bar.style.transition = `width ${config.dwell}ms linear`;
@@ -173,26 +181,18 @@
                     if (opt.isCorrect) {
                         isTransitioning = true;
                         speak("答啱喇");
-                        
-                        // 🚀 執行特效
-                        cards.forEach(c => {
-                            if (c !== card) c.classList.add('fade-out');
-                        });
+                        document.querySelectorAll('.match-card').forEach(c => { if (c !== card) c.classList.add('fade-out'); });
                         card.classList.add('correct-center');
-
-                        setTimeout(() => {
-                            area.innerHTML = '';
-                            setTimeout(nextLevel, 500);
-                        }, 3000); // 停留3秒
+                        setTimeout(() => { area.innerHTML = ''; nextLevel(); }, 3000);
                     } else {
                         card.style.borderColor = "var(--danger)";
-                        speak("唔係呢個");
+                        speak(opt.type === 'empty' ? "呢度係空嘅" : "唔係呢個錢幣");
                         setTimeout(() => { if(!isTransitioning) card.style.borderColor = "transparent"; }, 1000);
                     }
                 }, config.dwell);
             };
 
-            const stop = () => {
+            const stopGaze = () => {
                 if (isTransitioning) return;
                 clearTimeout(timer);
                 card.style.borderColor = "transparent";
@@ -201,9 +201,8 @@
                 bar.style.width = "0%";
             };
 
-            card.addEventListener('pointerdown', start);
-            card.addEventListener('pointerup', stop);
-            card.addEventListener('pointerleave', stop);
+            card.addEventListener('pointerenter', startGaze);
+            card.addEventListener('pointerleave', stopGaze);
             area.appendChild(card);
         });
     }
