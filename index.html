@@ -194,4 +194,51 @@
         options.sort(() => Math.random() - 0.5).forEach(opt => {
             const card = document.createElement('div');
             card.className = 'match-card';
-            card.innerHTML = opt.type === 'img' ? `<img src="${opt.data.file}"><div class="progress-bar"></div>` : `<div
+            card.innerHTML = opt.type === 'img' ? `<img src="${opt.data.file}"><div class="progress-bar"></div>` : `<div class="progress-bar"></div>`;
+
+            const startGaze = () => {
+                if (isTransitioning) return;
+                card.style.borderColor = "var(--gaze)";
+                const bar = card.querySelector('.progress-bar');
+                bar.style.transition = `width ${config.dwell}ms linear`;
+                bar.style.width = "100%";
+                
+                timer = setTimeout(() => {
+                    if (opt.isCorrect) {
+                        isTransitioning = true;
+                        speak("答啱喇");
+                        document.querySelectorAll('.match-card').forEach(c => { if (c !== card) c.classList.add('fade-out'); });
+                        card.classList.add('correct-center');
+                        
+                        // 顯示按鈕
+                        document.getElementById('next-btn').style.display = 'block';
+
+                        // 3秒後自動跳轉
+                        autoNextTimeout = setTimeout(() => {
+                            if (isTransitioning) nextLevel();
+                        }, 3000);
+                    } else {
+                        card.style.borderColor = "var(--danger)";
+                        speak(opt.type === 'empty' ? "呢度係空嘅" : "唔係呢個錢幣");
+                        setTimeout(() => { if(!isTransitioning) card.style.borderColor = "transparent"; }, 1000);
+                    }
+                }, config.dwell);
+            };
+
+            const stopGaze = () => {
+                if (isTransitioning) return;
+                clearTimeout(timer);
+                card.style.borderColor = "transparent";
+                const bar = card.querySelector('.progress-bar');
+                bar.style.transition = "none";
+                bar.style.width = "0%";
+            };
+
+            card.addEventListener('pointerenter', startGaze);
+            card.addEventListener('pointerleave', stopGaze);
+            area.appendChild(card);
+        });
+    }
+</script>
+</body>
+</html>
