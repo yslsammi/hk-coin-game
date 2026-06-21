@@ -2,8 +2,8 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>香港錢幣配對訓練</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>香港錢幣配對訓練_長者直覺優化版</title>
     <style>
         :root { 
             --primary: #007AFF; 
@@ -13,20 +13,34 @@
             --bg-color: #000000; 
             --card-white: #ffffff;
         }
-        * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: none; box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); font-family: -apple-system, sans-serif; }
         
-        /* 設定面板 */
-        #settings-panel { position: fixed; inset: 0; background: #1a1a1a; z-index: 2000; padding: 30px; overflow-y: auto; color: white; }
+        /* 💡 修正：全域不要暴力阻斷 touch-action，留給個別元件控制，保障設定選單能滑動 */
+        * { -webkit-touch-callout: none; -webkit-user-select: none; box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); font-family: -apple-system, sans-serif; position: fixed; }
+        
+        /* 🔓 【關鍵修正】設定面板：允許在 iPad 上絲滑滾動，增加彈性滾動 */
+        #settings-panel { 
+            position: fixed; inset: 0; background: #1a1a1a; z-index: 2000; padding: 30px; 
+            overflow-y: scroll; 
+            -webkit-overflow-scrolling: touch; 
+            touch-action: pan-y; 
+            color: white; 
+        }
         .setting-item { margin-bottom: 25px; border-bottom: 1px solid #444; padding-bottom: 15px; }
-        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-        .btn { padding: 15px 25px; border: 3px solid #555; border-radius: 15px; background: #333; color: white; font-size: 1.2rem; cursor: pointer; }
-        .btn.active { border-color: var(--primary); background: var(--primary); font-weight: bold; }
-        #start-btn { width: 100%; background: var(--success); color: white; padding: 25px; font-size: 2rem; border-radius: 20px; border: none; margin-top: 20px; font-weight: bold; cursor: pointer; }
+        .btn-group { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; }
+        
+        /* 放大按鈕尺寸，方便長者點擊 */
+        .btn { padding: 18px 28px; border: 3px solid #555; border-radius: 15px; background: #333; color: white; font-size: 1.4rem; cursor: pointer; transition: all 0.2s; }
+        .btn.active { border-color: var(--primary); background: var(--primary); font-weight: bold; transform: scale(1.02); }
+        
+        /* 開始按鈕留足底部邊距，防 iPad 底部黑線遮擋 */
+        #start-btn { width: 100%; background: var(--success); color: white; padding: 25px; font-size: 2.2rem; border-radius: 20px; border: none; margin-top: 20px; margin-bottom: 60px; font-weight: bold; cursor: pointer; box-shadow: 0 8px 20px rgba(40,167,69,0.4); }
 
         /* 遊戲介面 */
         #ui-header { position: fixed; top: 0; width: 100%; height: 90px; background: #1a1a1a; display: none; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 100; border-bottom: 2px solid #333; color: white; }
-        #game-area { display: flex; justify-content: center; align-items: center; gap: 80px; width: 100vw; height: 100vh; padding-top: 90px; position: relative; }
+        
+        /* 遊戲舞台區禁止手勢干擾 */
+        #game-area { display: flex; justify-content: center; align-items: center; gap: 80px; width: 100vw; height: 100vh; padding-top: 90px; position: relative; touch-action: none; }
         
         .match-card { 
             position: relative; 
@@ -39,45 +53,48 @@
             border-radius: 35px; 
             box-shadow: 0 0 40px rgba(255,255,255,0.15); 
             border: 12px solid transparent;
-            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            cursor: none;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
         }
         
-        .match-card img { max-width: 90%; max-height: 90%; object-fit: contain; pointer-events: none; }
-        .progress-bar { position: absolute; bottom: -18px; left: 0; width: 0%; height: 20px; background: var(--gaze); border-radius: 10px; box-shadow: 0 0 20px var(--gaze); }
+        .match-card img { max-width: 85%; max-height: 85%; object-fit: contain; pointer-events: none; }
+        .progress-bar { position: absolute; bottom: -12px; left: 0; width: 0%; height: 20px; background: var(--gaze); border-radius: 10px; box-shadow: 0 0 20px var(--gaze); }
 
+        /* 答對時放大1.3倍置中 */
         .match-card.correct-center {
-            position: absolute !important; left: 50% !important; top: 45% !important;
-            transform: translate(-50%, -50%) scale(1.3) !important;
+            position: absolute !important; left: 50% !important; top: 50% !important;
+            transform: translate(-50%, -50%) scale(1.35) !important;
             border-color: var(--success) !important;
             z-index: 1000 !important;
+            box-shadow: 0 0 60px rgba(40,167,69,0.6);
         }
         .match-card.fade-out { opacity: 0; transform: scale(0.5); pointer-events: none; }
 
         #next-btn {
             display: none;
             position: fixed;
-            bottom: 10%;
+            bottom: 8%;
             left: 50%;
             transform: translateX(-50%);
-            padding: 15px 50px;
-            font-size: 2rem;
-            background: rgba(40, 167, 69, 0.8);
+            padding: 20px 60px;
+            font-size: 2.2rem;
+            background: rgba(40, 167, 69, 0.95);
             color: white;
-            border: 2px solid white;
+            border: 3px solid white;
             border-radius: 50px;
             cursor: pointer;
             z-index: 3000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             transition: 0.2s;
+            font-weight: bold;
         }
-        #next-btn:active { background: var(--success); transform: translateX(-50%) scale(0.95); }
+        #next-btn:active { transform: translateX(-50%) scale(0.95); }
     </style>
 </head>
 <body>
 
 <div id="settings-panel">
-    <h1 style="text-align:center;">💰 視覺認知訓練：錢幣篇</h1>
+    <h1 style="text-align:center; font-size: 2.5rem; margin-top: 10px;">💰 視覺認知訓練：錢幣篇</h1>
     <div class="setting-item">
         <h3>1. 難度等級</h3>
         <div class="btn-group">
@@ -88,7 +105,7 @@
         </div>
     </div>
     <div class="setting-item">
-        <h3>2. 注視時間 (Dwell Time)</h3>
+        <h3>2. 注視/載入時間 (Dwell Time)</h3>
         <div class="btn-group">
             <button class="btn dwell-btn" data-ms="500">快速 (0.5s)</button>
             <button class="btn dwell-btn active" data-ms="1000">標準 (1.0s)</button>
@@ -98,18 +115,18 @@
     <div class="setting-item">
         <h3>3. 訓練面額</h3>
         <div class="btn-group">
-            <button class="btn coin-btn active" data-val="10">$10</button>
-            <button class="btn coin-btn active" data-val="20">$20</button>
-            <button class="btn coin-btn active" data-val="50">$50</button>
-            <button class="btn coin-btn active" data-val="100">$100</button>
+            <button class="btn coin-btn active" data-val="10">$10 蚊</button>
+            <button class="btn coin-btn active" data-val="20">$20 蚊</button>
+            <button class="btn coin-btn active" data-val="50">$50 蚊</button>
+            <button class="btn coin-btn active" data-val="100">$100 蚊</button>
         </div>
     </div>
     <button id="start-btn" onclick="startGame()">✅ 開始訓練</button>
 </div>
 
 <div id="ui-header">
-    <button onclick="location.reload()" style="padding:10px 20px; background:#333; color:white; border:none; border-radius:10px; cursor:pointer;">🏠 返回</button>
-    <div style="font-size: 2.2rem; font-weight: bold;">請找出：<span id="target-name" style="color:var(--gaze);">---</span></div>
+    <button onclick="location.reload()" style="padding:12px 25px; background:#333; color:white; border:none; border-radius:10px; font-size:1.2rem; cursor:pointer;">🏠 返回選單</button>
+    <div style="font-size: 2.5rem; font-weight: bold;">請找出：<span id="target-name" style="color:var(--gaze);">---</span></div>
     <div style="width:100px;"></div>
 </div>
 
@@ -121,6 +138,7 @@
     let timer = null;
     let autoNextTimeout = null;
     let isTransitioning = false;
+    let actionLock = false; // 用於鎖定單次點擊結算
 
     const money = {
         '10': { name: '十蚊', file: '10.png' },
@@ -134,6 +152,7 @@
         { name: '衣服', file: 'tee.png' }
     ];
 
+    // 設定選單事件綁定
     document.querySelectorAll('.lv-btn').forEach(b => b.onclick = () => {
         document.querySelectorAll('.lv-btn').forEach(x => x.classList.remove('active'));
         b.classList.add('active'); config.lv = parseInt(b.dataset.lv);
@@ -161,12 +180,13 @@
     }
 
     function triggerNextLevel() {
-        clearTimeout(autoNextTimeout); // 如果手動按了，就取消自動計時
+        clearTimeout(autoNextTimeout);
         nextLevel();
     }
 
     function nextLevel() {
         isTransitioning = false;
+        actionLock = false;
         document.getElementById('next-btn').style.display = 'none';
         const area = document.getElementById('game-area');
         area.innerHTML = '';
@@ -196,8 +216,12 @@
             card.className = 'match-card';
             card.innerHTML = opt.type === 'img' ? `<img src="${opt.data.file}"><div class="progress-bar"></div>` : `<div class="progress-bar"></div>`;
 
-            const startGaze = () => {
-                if (isTransitioning) return;
+            // 💡 【核心優化】點擊即自動觸發跑條，防長者手震提早放開
+            const triggerGaze = (e) => {
+                if (e) e.preventDefault();
+                if (isTransitioning || actionLock) return;
+
+                actionLock = true; // 鎖定當次操作
                 card.style.borderColor = "var(--gaze)";
                 const bar = card.querySelector('.progress-bar');
                 bar.style.transition = `width ${config.dwell}ms linear`;
@@ -210,35 +234,47 @@
                         document.querySelectorAll('.match-card').forEach(c => { if (c !== card) c.classList.add('fade-out'); });
                         card.classList.add('correct-center');
                         
-                        // 顯示按鈕
                         document.getElementById('next-btn').style.display = 'block';
 
-                        // 3秒後自動跳轉
+                        // 3.5秒後自動跳下一題
                         autoNextTimeout = setTimeout(() => {
                             if (isTransitioning) nextLevel();
-                        }, 3000);
+                        }, 3500);
                     } else {
+                        // 答錯機制：條變紅，講話提示
                         card.style.borderColor = "var(--danger)";
-                        speak(opt.type === 'empty' ? "呢度係空嘅" : "唔係呢個錢幣");
-                        setTimeout(() => { if(!isTransitioning) card.style.borderColor = "transparent"; }, 1000);
+                        bar.style.backgroundColor = "var(--danger)";
+                        speak(opt.type === 'empty' ? "呢度係空嘅" : "唔係呢個");
+                        
+                        // 1秒後重設狀態，讓長者可以繼續點另一個
+                        setTimeout(() => {
+                            if(!isTransitioning) {
+                                card.style.borderColor = "transparent";
+                                bar.style.transition = "none";
+                                bar.style.width = "0%";
+                                bar.style.backgroundColor = "var(--gaze)";
+                                actionLock = false;
+                            }
+                        }, 1200);
                     }
                 }, config.dwell);
             };
 
-            const stopGaze = () => {
-                if (isTransitioning) return;
-                clearTimeout(timer);
-                card.style.borderColor = "transparent";
-                const bar = card.querySelector('.progress-bar');
-                bar.style.transition = "none";
-                bar.style.width = "0%";
-            };
-
-            card.addEventListener('pointerenter', startGaze);
-            card.addEventListener('pointerleave', stopGaze);
+            // 同時支援點擊與觸控
+            card.addEventListener('touchstart', triggerGaze);
+            card.addEventListener('mousedown', triggerGaze);
             area.appendChild(card);
         });
     }
+
+    // 💡 防止 iPad 整個網頁被往上/下亂扯拉走
+    document.addEventListener('touchmove', function(e) {
+        const sp = document.getElementById('settings-panel');
+        if (sp && sp.contains(e.target)) {
+            return; // 允許設定選單內部正常滾動
+        }
+        if (e.cancelable) e.preventDefault();
+    }, { passive: false });
 </script>
 </body>
 </html>
